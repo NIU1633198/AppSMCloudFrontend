@@ -10,7 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 const { width, height } = Dimensions.get('window');
 
 import app from '../../firebase';
-import {getAuth, signInWithEmailAndPassword} from 'firebase/auth';
+import {getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword} from 'firebase/auth';
 const auth = getAuth(app);
 
 export default function AuthScreen() {
@@ -57,7 +57,7 @@ export default function AuthScreen() {
     }
   };
 
-  const handleRegister = () => {
+  const handleRegister = async() => {
     setMensajeError('');
 
     if (!nombre || !telefono || !email || !password || !repetirContrasena) {
@@ -90,10 +90,23 @@ export default function AuthScreen() {
       return;
     }
 
-    Alert.alert('Registro simulado', '¡Usuario registrado correctamente!');
+    try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+    // Aquí guardar `nombre` y `telefono` en Firestore
+    // const userId = userCredential.user.uid;
+
     setTimeout(() => {
-      router.replace('/');
+      router.replace('/home');
     }, 1000);
+  } catch (error: any) {
+    console.error("Error al registrar:", error);
+    if (error.code === 'auth/email-already-in-use') {
+      setMensajeError("El correo electrónico ya está en uso.");
+    } else {
+      setMensajeError("Error al registrar. Inténtalo de nuevo.");
+    }
+  }
   };
 
   const handleLogin = async() => {
