@@ -9,6 +9,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
+import app from '../../firebase';
+import {getAuth, signInWithEmailAndPassword} from 'firebase/auth';
+const auth = getAuth(app);
+
 export default function AuthScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
@@ -92,7 +96,7 @@ export default function AuthScreen() {
     }, 1000);
   };
 
-  const handleLogin = () => {
+  const handleLogin = async() => {
     setMensajeError('');
 
     if (!email || !password) {
@@ -110,10 +114,18 @@ export default function AuthScreen() {
       return;
     }
 
-    Alert.alert('Login simulado', 'Inicio de sesión correcto');
-    setTimeout(() => {
-      router.replace('/');
-    }, 1000);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      setTimeout(() => {
+        router.replace('/home');
+      }, 1000);
+    }
+    catch (error) {
+      console.error('Error al iniciar sesión:', error);
+      setMensajeError('Error al iniciar sesión. Por favor, verifica tus credenciales.');
+      return;
+    }
+
   };
 
   return (
