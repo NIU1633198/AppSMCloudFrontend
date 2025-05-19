@@ -161,7 +161,7 @@ export default function Home() {
               onPress={() => startGame('modo-normal')}
             >
               <Text style={styles.gameButtonText}>Modo Normal</Text>
-              <Text style={styles.gameButtonSubtext}>Supera retos con tiempo</Text>
+              <Text style={styles.gameButtonSubtext}>Haz la racha más larga que puedas</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -169,7 +169,7 @@ export default function Home() {
               onPress={() => startGame('timeTrial')}
             >
               <Text style={styles.gameButtonText}>Contrarreloj</Text>
-              <Text style={styles.gameButtonSubtext}>Encuentra el máximo de objetos</Text>
+              <Text style={styles.gameButtonSubtext}>Encuentra el máximo de objetos en un tiempo determinado</Text>
             </TouchableOpacity>
           </View>
         </View>
