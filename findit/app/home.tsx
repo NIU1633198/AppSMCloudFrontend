@@ -84,10 +84,8 @@ export default function Home() {
     router.push('/settings');
   };
 
-  const startGame = (mode) => {
-    // Esta función se implementará cuando desarrolles la página de juego
-    alert(`Iniciando juego en modo: ${mode}`);
-    // router.push(/game?mode=${mode});
+  const startGame = (mode: string) => {
+    router.push(`/${mode}`);
   };
 
   return (
@@ -134,22 +132,6 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Streak Section */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Tu racha actual</Text>
-          <View style={styles.streakContainer}>
-            <View style={styles.streakCircle}>
-              <Text style={styles.streakNumber}>{userData.streak}</Text>
-              <Text style={styles.streakText}>días</Text>
-            </View>
-            <Text style={styles.streakMessage}>
-              {userData.streak > 0 
-                ? `¡Llevas ${userData.streak} días seguidos jugando!` 
-                : "¡Empieza tu racha hoy!"}
-            </Text>
-          </View>
-        </View>
-
         {/* Ranking Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Ranking</Text>
@@ -176,7 +158,7 @@ export default function Home() {
           <View style={styles.gameModes}>
             <TouchableOpacity 
               style={styles.gameButton} 
-              onPress={() => startGame('normal')}
+              onPress={() => startGame('modo-normal')}
             >
               <Text style={styles.gameButtonText}>Modo Normal</Text>
               <Text style={styles.gameButtonSubtext}>Supera retos con tiempo</Text>
@@ -248,7 +230,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   sectionContainer: {
-    marginBottom: 24,
+    marginBottom: 50,
   },
   sectionTitle: {
     fontSize: 18,
@@ -330,7 +312,7 @@ const styles = StyleSheet.create({
   },
   rankingRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    paddingVertical: 15,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
