@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Animated, StyleSheet,
   ImageBackground, StatusBar, Dimensions, Image, Keyboard, Alert,
-  TouchableWithoutFeedback, ScrollView
+  TouchableWithoutFeedback, ScrollView,KeyboardAvoidingView, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -142,7 +142,6 @@ export default function AuthScreen() {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.containerBackground}>
         <View style={styles.imageContainer}>
           <ImageBackground source={require('../../assets/images/background.jpg')} style={styles.background}>
@@ -153,7 +152,7 @@ export default function AuthScreen() {
 
         <SafeAreaView style={styles.safeArea}>
           <StatusBar barStyle="light-content" />
-          <View style={[styles.container, isLogin && { height: '110%' }]}>
+          <View style={[styles.container, { height: isLogin ? '90%' : '130%' }]}>
             <View style={styles.toggleContainer}>
               <Animated.View
                 style={[
@@ -178,19 +177,26 @@ export default function AuthScreen() {
 
             {!isLogin ? (
               <>
-                <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-                  <View style={styles.inputContainer}><TextInput style={styles.input} placeholder="Nombre" placeholderTextColor="#213e3d" value={nombre} onChangeText={setNombre} /></View>
-                  <View style={styles.inputContainer}><TextInput style={styles.input} placeholder="Teléfono" placeholderTextColor="#213e3d" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" /></View>
-                  <View style={styles.inputContainer}><TextInput style={styles.input} placeholder="Correo electrónico" placeholderTextColor="#213e3d" value={email} onChangeText={setEmail} keyboardType="email-address" /></View>
-                  <View style={styles.inputContainer}><TextInput style={styles.input} placeholder="Contraseña" placeholderTextColor="#213e3d" secureTextEntry textContentType="newPassword" autoComplete="off" value={password} onChangeText={setPassword} /></View>
-                  <View style={styles.inputContainer}><TextInput style={styles.input} placeholder="Repetir contraseña" placeholderTextColor="#213e3d" secureTextEntry textContentType="newPassword" autoComplete="off" value={repetirContrasena} onChangeText={setRepetirContrasena} /></View>
+                <ScrollView
+                  contentContainerStyle={styles.scrollContainer}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                  style={{ width: '100%' }}
+                >
+                  <View style={styles.inputGroup}>
+                    <TextInput style={styles.input} placeholder="Nombre" placeholderTextColor="#213e3d" value={nombre} onChangeText={setNombre} />
+                    <TextInput style={styles.input} placeholder="Teléfono" placeholderTextColor="#213e3d" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" />
+                    <TextInput style={styles.input} placeholder="Correo electrónico" placeholderTextColor="#213e3d" value={email} onChangeText={setEmail} keyboardType="email-address" />
+                    <TextInput style={styles.input} placeholder="Contraseña" placeholderTextColor="#213e3d" secureTextEntry value={password} onChangeText={setPassword} />
+                    <TextInput style={styles.input} placeholder="Repetir contraseña" placeholderTextColor="#213e3d" secureTextEntry value={repetirContrasena} onChangeText={setRepetirContrasena} />
+                  </View>
+
+                  {mensajeError ? <Text style={styles.warningText}>{mensajeError}</Text> : null}
+
+                  <TouchableOpacity style={styles.button} onPress={handleRegister}>
+                    <Text style={styles.buttonText}>Crear cuenta</Text>
+                  </TouchableOpacity>
                 </ScrollView>
-
-                {mensajeError ? <Text style={styles.warningText}>{mensajeError}</Text> : null}
-
-                <TouchableOpacity style={styles.button} onPress={handleRegister}>
-                  <Text style={styles.buttonText}>Crear cuenta</Text>
-                </TouchableOpacity>
               </>
             ) : (
               <>
@@ -208,7 +214,6 @@ export default function AuthScreen() {
           </View>
         </SafeAreaView>
       </View>
-    </TouchableWithoutFeedback>
   );
 }
 
@@ -290,38 +295,54 @@ const styles = StyleSheet.create({
     color: '#2f5856',
     marginBottom: 10,
   },
-  input: {
-    width: '100%',
-    paddingVertical: height * 0.015,
-    borderBottomWidth: 1,
-    borderBottomColor: '#213e3d',
-    marginBottom: height * 0.02,
-    fontSize: height * 0.02,
-    flex: 1,
-  },
-  inputContainer: {
-    width: '95%', // 🔹 Define un ancho consistente para todos los inputs
-    flexDirection: 'row', // 🔹 Asegura que el input se expanda dentro de su View
-},
-  button: {
-    backgroundColor: '#478783',
-    paddingVertical: 15,
-    width: '100%',
-    alignItems: 'center',
-    borderRadius: 30,
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
   warningText: {
     color: '#D9534F',
     textAlign: 'center',
     marginBottom: 10,
   },
-  scrollContainer: {
+  input: {
+    width: '100%',
+    paddingVertical: height * 0.015,
+    paddingHorizontal: width * 0.04,
+    borderWidth: 1,
+    borderColor: '#213e3d',
+    borderRadius: 10,
+    marginBottom: height * 0.015,
+    fontSize: height * 0.02,
+    backgroundColor: '#fff',
+  },
+
+  inputContainer: {
     width: '100%',
     alignItems: 'center',
+  },
+
+  inputGroup: {
+    width: '100%',
+    marginTop: 10,
+    marginBottom: 20,
+    paddingHorizontal: 10,
+  },
+
+  button: {
+    backgroundColor: '#478783',
+    paddingVertical: height * 0.018,
+    paddingHorizontal: width * 0.1,
+    borderRadius: 30,
+    alignItems: 'center',
+    alignSelf: 'center',
+    width: '85%',
+    marginTop: 5,
+  },
+
+  buttonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: height * 0.022,
+  },
+
+  scrollContainer: {
+    paddingBottom: 30,
+    width: '100%',
   },
 });
