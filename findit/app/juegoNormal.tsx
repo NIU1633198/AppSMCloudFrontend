@@ -7,12 +7,28 @@ import {
   Image,
   Dimensions,
   Animated,
-  Modal,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { AntDesign } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  query,
+  where,
+} from 'firebase/firestore';
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} from 'firebase/storage';
+import {
+  getFunctions,
+  httpsCallable,
+} from 'firebase/functions';
+import uuid from 'react-native-uuid';
 import app from '../firebase';
 
 const { width } = Dimensions.get('window');
@@ -22,7 +38,7 @@ export default function Juego() {
   const db = getFirestore(app);
 
   const [imagenSeleccionada, setImagenSeleccionada] = useState<string | null>(null);
-  const [tiempoRestante, setTiempoRestante] = useState(300); // 5 minutos
+  const [tiempoRestante, setTiempoRestante] = useState(300);
   const [modalTiempoAgotado, setModalTiempoAgotado] = useState(false);
   const [modalIncorrecto, setModalIncorrecto] = useState(false);
   const [modalCorrecto, setModalCorrecto] = useState(false);
@@ -40,13 +56,11 @@ export default function Juego() {
     if (!result.canceled && result.assets?.length > 0) {
       const uri = result.assets[0].uri;
       setImagenSeleccionada(uri);
-      // TODO: Subir a Firebase Storage
     }
   };
 
   const eliminarImagen = () => {
     setImagenSeleccionada(null);
-    // TODO: Borrar de Firebase Storage
   };
 
   const obtenerRetoAleatorio = async () => {
@@ -63,24 +77,45 @@ export default function Juego() {
       const indiceAleatorio = Math.floor(Math.random() * documentos.length);
       const reto = documentos[indiceAleatorio].data();
 
-      setRetoActual(reto.palabra); // usar idiomas[idioma] si necesitas multilingüe
+      setRetoActual(reto.palabra);
     } catch (error) {
       console.error('Error obteniendo reto aleatorio:', error);
     }
   };
 
-  const comprobarImagen = () => {
-    // TODO: Llamar a Cloud Function para analizar la imagen
-    // Simulamos que la imagen es correcta o incorrecta:
-    const esCorrecta = true; // sustituir por resultado real del backend
+    const analizarImagen = async () => {
+    if (!imagenSeleccionada) return [];
+
+    try {
+      const response = await fetch(imagenSeleccionada);
+      const blob = await response.blob();
+      const filename = `${uuid.v4()}.jpg`;
+      const storage = getStorage();
+      const storageRef = ref(storage, `imagenes/${filename}`);
+      await uploadBytes(storageRef, blob);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      const functions = getFunctions();
+      const visionFunction = httpsCallable(functions, 'analizarImagen');
+      const result = await visionFunction({ imageUrl: downloadURL }) as { data: { etiquetas: string[] } };
+
+      return result.data.etiquetas.map((et) => et.toLowerCase());
+    } catch (error) {
+      console.error('Error analizando imagen:', error);
+      return [];
+    }
+  };
+
+
+  const comprobarImagen = async () => {
+    const etiquetas = await analizarImagen();
+    const esCorrecta = etiquetas.includes(retoActual.toLowerCase());
 
     if (esCorrecta) {
       setRacha((prev) => prev + 1);
       setModalCorrecto(true);
-      // TODO: Guardar progreso en Firestore
     } else {
       setModalIncorrecto(true);
-      // TODO: Guardar fallo en Firestore
     }
   };
 
@@ -110,7 +145,6 @@ export default function Juego() {
       ]).start();
 
       setModalTiempoAgotado(true);
-      // TODO: Guardar datos de la partida
       return;
     }
 
@@ -131,9 +165,14 @@ export default function Juego() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Reto actual:</Text>
-      <Text style={styles.challenge}>📸 Encuentra y sube una imagen de un/una <Text style={styles.highlight}>{retoActual}</Text></Text>
+      <Text style={styles.challenge}>
+        📸 Encuentra y sube una imagen de un/una{' '}
+        <Text style={styles.highlight}>{retoActual}</Text>
+      </Text>
 
-      <Animated.Text style={[styles.timer, { transform: [{ scale: animacion }] }]}>⏳ {formatearTiempo(tiempoRestante)}</Animated.Text>
+      <Animated.Text style={[styles.timer, { transform: [{ scale: animacion }] }]}>
+        ⏳ {formatearTiempo(tiempoRestante)}
+      </Animated.Text>
 
       <View style={styles.box}>
         {imagenSeleccionada ? (
@@ -149,7 +188,9 @@ export default function Juego() {
       </View>
 
       <TouchableOpacity style={styles.uploadButton} onPress={seleccionarImagen}>
-        <Text style={styles.uploadButtonText}>{imagenSeleccionada ? 'Cambiar imagen' : 'Seleccionar imagen'}</Text>
+        <Text style={styles.uploadButtonText}>
+          {imagenSeleccionada ? 'Cambiar imagen' : 'Seleccionar imagen'}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -159,11 +200,6 @@ export default function Juego() {
       >
         <Text style={styles.uploadButtonText}>Comprobar</Text>
       </TouchableOpacity>
-
-      {/* Modales (idénticos a los anteriores, sin cambios) */}
-      {/* ...modalTiempoAgotado... */}
-      {/* ...modalIncorrecto... */}
-      {/* ...modalCorrecto... */}
     </View>
   );
 }

@@ -166,7 +166,7 @@ export default function Home() {
             
             <TouchableOpacity 
               style={[styles.gameButton, styles.timeTrialButton]} 
-              onPress={() => startGame('timeTrial')}
+              onPress={() => startGame('modo-contrarreloj')}
             >
               <Text style={styles.gameButtonText}>Contrarreloj</Text>
               <Text style={styles.gameButtonSubtext}>Encuentra el máximo de objetos en un tiempo determinado</Text>
