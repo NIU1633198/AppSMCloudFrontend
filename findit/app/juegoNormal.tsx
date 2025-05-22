@@ -1,35 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  Dimensions,
-  Animated,
-} from 'react-native';
+import {View,Text,StyleSheet,TouchableOpacity,Image,Dimensions,Animated,Alert, Platform,} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { AntDesign } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  query,
-  where,
-} from 'firebase/firestore';
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL,
-} from 'firebase/storage';
-import {
-  getFunctions,
-  httpsCallable,
-} from 'firebase/functions';
+import {getFirestore,collection,getDocs,query,where,} from 'firebase/firestore';
+import {getStorage,ref,uploadBytes,getDownloadURL,} from 'firebase/storage';
+import {getFunctions,httpsCallable,} from 'firebase/functions';
 import uuid from 'react-native-uuid';
-import app from '../firebase';
+import { app } from '../firebase';
+import { functions } from '../firebase';
+
 
 const { width } = Dimensions.get('window');
 
@@ -83,41 +63,64 @@ export default function Juego() {
     }
   };
 
-    const analizarImagen = async () => {
-    if (!imagenSeleccionada) return [];
+  const analizarImagen = async () => {
+    if (!imagenSeleccionada) {
+      console.warn("⚠️ No hay imagen seleccionada");
+      return [];
+    }
 
     try {
+      console.log("📤 Subiendo imagen...");
       const response = await fetch(imagenSeleccionada);
       const blob = await response.blob();
       const filename = `${uuid.v4()}.jpg`;
+
       const storage = getStorage();
       const storageRef = ref(storage, `imagenes/${filename}`);
       await uploadBytes(storageRef, blob);
       const downloadURL = await getDownloadURL(storageRef);
+      console.log("🌐 URL de imagen subida:", downloadURL);
 
-      const functions = getFunctions();
+      // ✅ CONFIGURACIÓN CORRECTA DE FUNCTIONS
       const visionFunction = httpsCallable(functions, 'analizarImagen');
-      const result = await visionFunction({ imageUrl: downloadURL }) as { data: { etiquetas: string[] } };
+
+      const result = await visionFunction({ imageUrl: downloadURL }) as any;
+      console.log("✅ Etiquetas recibidas:", result.data.etiquetas);
 
       return result.data.etiquetas.map((et) => et.toLowerCase());
     } catch (error) {
-      console.error('Error analizando imagen:', error);
+      console.error('❌ Error analizando imagen:', error);
       return [];
     }
   };
 
 
+
   const comprobarImagen = async () => {
+    console.log("Comprobando imagen...");
+
     const etiquetas = await analizarImagen();
+    console.log("Etiquetas detectadas:", etiquetas);
+    console.log("Reto actual:", retoActual);
+
     const esCorrecta = etiquetas.includes(retoActual.toLowerCase());
+    console.log("¿Es correcta?", esCorrecta);
 
     if (esCorrecta) {
       setRacha((prev) => prev + 1);
       setModalCorrecto(true);
     } else {
       setModalIncorrecto(true);
+
+      setTimeout(() => {
+        setModalIncorrecto(false);
+        setModalTiempoAgotado(true);
+      }, 2000);
     }
   };
+
+
+
 
   const formatearTiempo = (seg: number) => {
     const m = Math.floor(seg / 60).toString().padStart(2, '0');
@@ -162,8 +165,27 @@ export default function Juego() {
     obtenerRetoAleatorio();
   };
 
+  const reiniciarJuegoCompleto = () => {
+    setImagenSeleccionada(null);
+    setTiempoRestante(300);
+    setRacha(0);
+    setModalCorrecto(false);
+    setModalIncorrecto(false);
+    setModalTiempoAgotado(false);
+    setRetoActual('');
+  };
+
+  const [mostrarModalCerrar, setMostrarModalCerrar] = useState(false);
+
   return (
     <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={() => setMostrarModalCerrar(true)}
+      >
+        <AntDesign name="close" size={24} color="#D9534F" />
+      </TouchableOpacity>
+
       <Text style={styles.title}>Reto actual:</Text>
       <Text style={styles.challenge}>
         📸 Encuentra y sube una imagen de un/una{' '}
@@ -200,6 +222,75 @@ export default function Juego() {
       >
         <Text style={styles.uploadButtonText}>Comprobar</Text>
       </TouchableOpacity>
+
+      {mostrarModalCerrar && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Cerrar juego</Text>
+            <Text style={styles.modalText}>¿Estás seguro de que quieres salir? Se perderá el progreso.</Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                onPress={() => setMostrarModalCerrar(false)}
+                style={[styles.modalButton, { backgroundColor: '#ccc' }]}
+              >
+                <Text>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setMostrarModalCerrar(false);
+                  reiniciarJuegoCompleto();
+                  router.replace('/home');
+                }}
+                style={[styles.modalButton, { backgroundColor: '#D9534F' }]}
+              >
+                <Text style={{ color: 'white' }}>Salir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+      {modalCorrecto && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalText}>✅ ¡Correcto!</Text>
+            <Text style={styles.modalText}>Racha: {racha}</Text>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#478783', marginTop: 10 }]}
+              onPress={iniciarNuevoReto}
+            >
+              <Text style={{ color: 'white' }}>Aceptar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {modalIncorrecto && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalText}>❌ Objeto incorrecto</Text>
+            <Text style={styles.modalText}>¡Fin de la partida!</Text>
+          </View>
+        </View>
+      )}
+      {modalTiempoAgotado && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalText}>⏰ Tiempo agotado</Text>
+            <Text style={styles.modalText}>Puntuación final: {racha}</Text>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#478783', marginTop: 10 }]}
+              onPress={() => {
+                reiniciarJuegoCompleto();
+                router.replace('/home');
+              }}
+            >
+              <Text style={{ color: 'white' }}>Volver al inicio</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+
     </View>
   );
 }
@@ -283,4 +374,61 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  closeButton: {
+    position: 'absolute',
+    top: 30,
+    right: 20,
+    backgroundColor: '#fff',
+    padding: 6,
+    borderRadius: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+
+  modalOverlay: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 10,
+},
+modalContainer: {
+  width: '80%',
+  backgroundColor: '#fff',
+  borderRadius: 10,
+  padding: 20,
+  alignItems: 'center',
+  elevation: 5,
+},
+modalTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  marginBottom: 10,
+  color: '#D9534F',
+},
+modalText: {
+  fontSize: 16,
+  marginBottom: 20,
+  textAlign: 'center',
+},
+modalButtons: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  width: '100%',
+},
+modalButton: {
+  flex: 1,
+  padding: 10,
+  marginHorizontal: 5,
+  borderRadius: 6,
+  alignItems: 'center',
+},
+
+
 });

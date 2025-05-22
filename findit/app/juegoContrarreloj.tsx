@@ -30,6 +30,7 @@ import {
 } from 'firebase/functions';
 import uuid from 'react-native-uuid';
 import app from '../firebase';
+import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -157,8 +158,26 @@ export default function JuegoContrarreloj() {
     obtenerRetoAleatorio();
   };
 
+  const [mostrarModalCerrar, setMostrarModalCerrar] = useState(false);
+  const cerrarJuego = () => {
+    setMostrarModalCerrar(false);
+    setImagenSeleccionada(null);
+    setTiempoRestante(600);
+    setRacha(0);
+    setModalFinal(false);
+    setRetoActual('');
+  };
+
+
   return (
     <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={() => setMostrarModalCerrar(true)}
+      >
+        <AntDesign name="close" size={24} color="#D9534F" />
+      </TouchableOpacity>
+
       <Text style={styles.title}>Reto actual:</Text>
       <Text style={styles.challenge}>
         📸 Encuentra y sube una imagen de un/una <Text style={styles.highlight}>{retoActual}</Text>
@@ -206,6 +225,33 @@ export default function JuegoContrarreloj() {
           </TouchableOpacity>
         </View>
       )}
+      {mostrarModalCerrar && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Cerrar juego</Text>
+            <Text style={styles.modalText}>¿Seguro que quieres salir? Perderás tu progreso actual.</Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#ccc' }]}
+                onPress={() => setMostrarModalCerrar(false)}
+              >
+                <Text>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#D9534F' }]}
+                onPress={() => {
+                  cerrarJuego
+                  router.replace('/home');
+                }}               
+              >
+                <Text style={{ color: 'white' }}>Salir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
     </View>
   );
 }
@@ -312,4 +358,56 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#2f5856',
   },
+  closeButton: {
+    position: 'absolute',
+    top: 30,
+    right: 20,
+    backgroundColor: '#fff',
+    padding: 6,
+    borderRadius: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    zIndex: 10,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#D9534F',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 10,
+    marginHorizontal: 5,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+
 });
