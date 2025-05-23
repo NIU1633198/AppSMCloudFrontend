@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import Icon from 'react-native-vector-icons/Ionicons';
+
 import {
   Text,
   StyleSheet,
@@ -151,9 +153,11 @@ export default function Settings() {
       
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Image 
-            source={require('../assets/images/back-icon.png')} 
-            style={styles.backIcon} 
+          <Icon 
+            name="arrow-back" 
+            size={24} 
+            color="#fff" 
+            style={styles.backIcon}
           />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Configuración</Text>

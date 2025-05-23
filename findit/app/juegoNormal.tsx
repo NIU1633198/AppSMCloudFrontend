@@ -24,6 +24,7 @@ export default function Juego() {
   const [modalCorrecto, setModalCorrecto] = useState(false);
   const [racha, setRacha] = useState(0);
   const [retoActual, setRetoActual] = useState<string>('');
+  const [variantesReto, setVariantesReto] = useState<Array<string> | null>(null);
   const animacion = useRef(new Animated.Value(1)).current;
 
   const seleccionarImagen = async () => {
@@ -58,6 +59,7 @@ export default function Juego() {
       const reto = documentos[indiceAleatorio].data();
 
       setRetoActual(reto.palabra);
+      setVariantesReto(reto.variantes ?? []);
     } catch (error) {
       console.error('Error obteniendo reto aleatorio:', error);
     }
@@ -100,10 +102,17 @@ export default function Juego() {
     console.log("Comprobando imagen...");
 
     const etiquetas = await analizarImagen();
-    console.log("Etiquetas detectadas:", etiquetas);
     console.log("Reto actual:", retoActual);
+    console.log("Variantes del reto:", variantesReto);
 
-    const esCorrecta = etiquetas.includes(retoActual.toLowerCase());
+    const etiquetasLower = etiquetas.map((etiqueta) => etiqueta.toLowerCase());
+
+    const esCorrecta =
+      Array.isArray(variantesReto) &&
+      variantesReto.some((variante) =>
+        etiquetasLower.includes(variante.toLowerCase())
+      );
+
     console.log("¿Es correcta?", esCorrecta);
 
     if (esCorrecta) {
@@ -118,6 +127,7 @@ export default function Juego() {
       }, 2000);
     }
   };
+
 
 
 

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import Icon from 'react-native-vector-icons/Ionicons';
+
 import {
   Text,
   StyleSheet,
@@ -62,7 +64,7 @@ export default function Home() {
               });
             }
           }
-          // En una implementación real, también cargaríamos los datos del ranking desde Firestore
+          // Cargar los datos del ranking desde Firestore
         }
       } catch (error) {
         console.error("Error loading user data:", error);
@@ -105,10 +107,7 @@ export default function Home() {
           </View>
         </View>
         <TouchableOpacity onPress={navigateToSettings} style={styles.settingsButton}>
-          <Image 
-            source={require('../assets/images/settings.png')} 
-            style={styles.settingsIcon} 
-          />
+          <Icon name="settings-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
