@@ -4,14 +4,15 @@ import {
   ImageBackground, StatusBar, Dimensions, Image, Keyboard, Alert,
   TouchableWithoutFeedback, ScrollView,KeyboardAvoidingView, Platform
 } from 'react-native';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
-
-import app from '../../firebase';
+import { app } from '../../firebase';
 import {getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword} from 'firebase/auth';
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 export default function AuthScreen() {
   const params = useLocalSearchParams();
@@ -92,9 +93,18 @@ export default function AuthScreen() {
 
     try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
-    // Aquí guardar `nombre` y `telefono` en Firestore
-    // const userId = userCredential.user.uid;
+    const userId = userCredential.user.uid;
+    // Guardar datos en Firestore
+    await setDoc(doc(db, 'users', userId), {
+      nombre,
+      telefono,
+      email,
+      fechaRegistro: new Date().toISOString(),
+      objetosEncontrados: 0,
+      precision: 0,
+      puntos: 0,
+      partidasTotales: 0,
+    });
 
     setTimeout(() => {
       router.replace('/home');

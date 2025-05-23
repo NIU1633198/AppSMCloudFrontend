@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import Icon from 'react-native-vector-icons/Ionicons';
+
 import {
   Text,
   StyleSheet,
@@ -8,61 +10,115 @@ import {
   ScrollView,
   SafeAreaView,
   Dimensions,
-  StatusBar
+  StatusBar,
+  ActivityIndicator
 } from "react-native";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, limit,Timestamp } from "firebase/firestore";
+import { app } from '../firebase';
 
 const { width, height } = Dimensions.get('window');
 
-// Datos de ejemplo para la vista previa
-const mockUserData = {
-  name: "Marc",
-  points: 2450,
-  level: 8,
-  streak: 5,
-  objectsFound: 42,
-  accuracy: 78
-};
+interface UserData {
+  name: string;
+  points: number;
+  level: number;
+  streak: number;
+  objectsFound: number;
+  accuracy: number;
+}
 
-const mockRanking = [
-  { id: "1", name: "05/01/2025", points: 4320 },
-  { id: "2", name: "20/03/2025", points: 2450, isCurrentUser: true },
-  { id: "3", name: "08/04/2025", points: 2100 },
-  { id: "4", name: "01/05/2025", points: 1840 },
-  { id: "5", name: "08/05/2025", points: 1650 }
-];
+interface GameMatch {
+  puntos: number;
+  fecha: Timestamp;
+  objetosCorrectos: number;
+  precisionMedia: number;
+}
+
+interface RankingItem {
+  id: string;
+  name: string;
+  points: number;
+  isCurrentUser?: boolean;
+}
 
 export default function Home() {
   const router = useRouter();
   const auth = getAuth();
-  const db = getFirestore();
+  const db = getFirestore(app);
   
-  const [userData, setUserData] = useState(mockUserData);
-  const [ranking, setRanking] = useState(mockRanking);
+  const [userData, setUserData] = useState<UserData>({
+    name: "",
+    points: 0,
+    level: 1,
+    streak: 0,
+    objectsFound: 0,
+    accuracy: 0
+  });
+  const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Función para calcular el nivel basado en los puntos
+  const calculateLevel = (points: number): number => {
+    if (points < 500) return 1;
+    if (points < 1000) return 2;
+    if (points < 2000) return 3;
+    if (points < 3500) return 4;
+    if (points < 5500) return 5;
+    if (points < 8000) return 6;
+    if (points < 11000) return 7;
+    if (points < 15000) return 8;
+    if (points < 20000) return 9;
+    return 10;
+  };
+
+  // Función para formatear la fecha
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
 
   useEffect(() => {
     const loadUserData = async () => {
       try {
         const currentUser = auth.currentUser;
-        if (currentUser) {
-          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-          if (userDoc.exists()) {
-            const userDataFromFirestore = userDoc.data();
-            if (userDataFromFirestore) {
-              setUserData({
-                name: userDataFromFirestore.name || "",
-                points: userDataFromFirestore.points || 0,
-                level: userDataFromFirestore.level || 0,
-                streak: userDataFromFirestore.streak || 0,
-                objectsFound: userDataFromFirestore.objectsFound || 0,
-                accuracy: userDataFromFirestore.accuracy || 0,
-              });
-            }
-          }
-          // En una implementación real, también cargaríamos los datos del ranking desde Firestore
+        if (!currentUser) {
+          console.log("No hay usuario autenticado");
+          setLoading(false);
+          return;
+        }
+
+        console.log("Cargando datos del usuario:", currentUser.uid);
+
+        // Cargar datos principales del usuario
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userDataFromFirestore = userDoc.data();
+          console.log("Datos del usuario:", userDataFromFirestore);
+
+          const points = userDataFromFirestore.puntos || 0;
+          const level = calculateLevel(points);
+
+          setUserData({
+            name: userDataFromFirestore.nombre || "Usuario",
+            points: points,
+            level: level,
+            streak: 0, // Se calculará desde las partidas más recientes
+            objectsFound: userDataFromFirestore.objetosEncontrados || 0,
+            accuracy: Math.round(userDataFromFirestore.precision || 0),
+          });
+
+          // Cargar las mejores partidas para el ranking
+          await loadBestMatches(currentUser.uid);
+        } else {
+          console.log("No se encontró documento del usuario");
         }
       } catch (error) {
         console.error("Error loading user data:", error);
@@ -73,6 +129,35 @@ export default function Home() {
 
     loadUserData();
   }, []);
+
+    const loadBestMatches = async (userId: string) => {
+    try {
+      const partidasRef = collection(db, "users", userId, "partidas");
+      const q = query(partidasRef, orderBy("puntos", "desc"), limit(5));
+      const partidasSnapshot = await getDocs(q);
+
+      const bestMatches: RankingItem[] = [];
+      let index = 0;
+
+      partidasSnapshot.forEach((doc) => {
+        const matchData = doc.data() as GameMatch;
+
+        bestMatches.push({
+          id: (index + 1).toString(),
+          name: formatDate(matchData.fecha.toDate()), // ✅ OK
+          points: matchData.puntos,
+          isCurrentUser: index === 0
+        });
+
+        index++;
+      });
+
+      setRanking(bestMatches);
+    } catch (error) {
+      console.error("Error loading best matches:", error);
+    }
+  };
+
 
   const handleLogout = () => {
     auth.signOut().then(() => {
@@ -87,6 +172,17 @@ export default function Home() {
   const startGame = (mode: string) => {
     router.push(`/${mode}`);
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#478783" />
+          <Text style={styles.loadingText}>Cargando datos...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -105,10 +201,7 @@ export default function Home() {
           </View>
         </View>
         <TouchableOpacity onPress={navigateToSettings} style={styles.settingsButton}>
-          <Image 
-            source={require('../assets/images/settings.png')} 
-            style={styles.settingsIcon} 
-          />
+          <Icon name="settings-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -134,21 +227,29 @@ export default function Home() {
 
         {/* Ranking Section */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Ranking</Text>
+          <Text style={styles.sectionTitle}>Mis mejores partidas</Text>
           <View style={styles.rankingContainer}>
-            {ranking.map(player => (
-              <View 
-                key={player.id} 
-                style={[
-                  styles.rankingRow, 
-                  player.isCurrentUser && styles.currentUserRow
-                ]}
-              >
-                <Text style={styles.rankingPosition}>{player.id}</Text>
-                <Text style={styles.rankingName}>{player.name}</Text>
-                <Text style={styles.rankingPoints}>{player.points} pts</Text>
+            {ranking.length > 0 ? (
+              ranking.map(match => (
+                <View 
+                  key={match.id} 
+                  style={[
+                    styles.rankingRow, 
+                    match.isCurrentUser && styles.currentUserRow
+                  ]}
+                >
+                  <Text style={styles.rankingPosition}>{match.id}</Text>
+                  <Text style={styles.rankingName}>{match.name}</Text>
+                  <Text style={styles.rankingPoints}>{match.points} pts</Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.noDataContainer}>
+                <Text style={styles.noDataText}>
+                  ¡Juega tu primera partida para aparecer en el ranking!
+                </Text>
               </View>
-            ))}
+            )}
           </View>
         </View>
 
@@ -182,6 +283,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f6f8fa",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#478783',
   },
   header: {
     flexDirection: 'row',
@@ -336,6 +447,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#478783',
   },
+  noDataContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noDataText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
   gameModes: {
     marginTop: 8,
   },
@@ -361,6 +482,6 @@ const styles = StyleSheet.create({
   },
   gameButtonSubtext: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
 });

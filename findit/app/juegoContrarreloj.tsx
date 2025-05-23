@@ -29,7 +29,7 @@ import {
   httpsCallable,
 } from 'firebase/functions';
 import uuid from 'react-native-uuid';
-import app from '../firebase';
+import {app} from '../firebase';
 import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
