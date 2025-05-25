@@ -3,12 +3,70 @@ import {View,Text,StyleSheet,TouchableOpacity,Image,Dimensions,Animated,Alert, P
 import * as DocumentPicker from 'expo-document-picker';
 import { AntDesign } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import {getFirestore,collection,getDocs,query,where,} from 'firebase/firestore';
+import {getFirestore,collection,getDocs,query,where,doc, updateDoc, increment, addDoc, Timestamp, getDoc} from 'firebase/firestore';
 import {getStorage,ref,uploadBytes,getDownloadURL,} from 'firebase/storage';
 import {getFunctions,httpsCallable,} from 'firebase/functions';
 import uuid from 'react-native-uuid';
 import { app } from '../firebase';
 import { functions } from '../firebase';
+import { getAuth } from 'firebase/auth';
+
+const guardarResultadosPartida = async (rachaFinal: number) => {
+  const auth = getAuth();
+  const db = getFirestore(app);
+  const user = auth.currentUser;
+
+  if (!user) {
+    console.warn("⚠️ No hay usuario autenticado");
+    return;
+  }
+
+  const userRef = doc(db, "users", user.uid);
+  const partidasRef = collection(db, "users", user.uid, "partidas");
+
+  try {
+    const userDoc = await getDoc(userRef);
+    const datos = userDoc.data();
+
+    const objetosAnteriores = datos?.objetosEncontrados || 0;
+    const partidasAnteriores = datos?.partidasTotales || 0;
+    const objetosJugadosAnteriores = datos?.objetosJugados || (partidasAnteriores * 10) || 0; // fallback
+
+    const objetosEncontradosTotales = objetosAnteriores + rachaFinal;
+    const partidasTotales = partidasAnteriores + 1;
+    const objetosJugadosEnEstaPartida = rachaFinal + 1; // racha + 1 fallo
+    const objetosJugadosTotales = objetosJugadosAnteriores + objetosJugadosEnEstaPartida;
+
+    const precisionCalculada = objetosJugadosTotales > 0
+      ? Math.round((objetosEncontradosTotales / objetosJugadosTotales) * 100)
+      : 0;
+
+    const puntosActualizados = objetosEncontradosTotales * 10;
+
+    // Actualiza estadísticas del usuario
+    await updateDoc(userRef, {
+      objetosEncontrados: objetosEncontradosTotales,
+      partidasTotales: partidasTotales,
+      precision: precisionCalculada,
+      puntos: puntosActualizados,
+      objetosJugados: objetosJugadosTotales, // Nuevo campo para almacenar objetos jugados
+    });
+
+    // Crea una nueva entrada en partidas
+    await addDoc(partidasRef, {
+      puntos: rachaFinal * 10,
+      fecha: Timestamp.now(),
+      objetosCorrectos: rachaFinal,
+      precisionMedia: precisionCalculada,
+      objetosJugados: objetosJugadosEnEstaPartida,
+    });
+
+    console.log("✅ Resultados actualizados correctamente");
+  } catch (error) {
+    console.error("❌ Error guardando resultados:", error);
+  }
+};
+
 
 
 const { width } = Dimensions.get('window');
@@ -277,7 +335,8 @@ export default function Juego() {
             <Text style={styles.modalText}>Puntuación final: {racha}</Text>
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: '#478783', marginTop: 10 }]}
-              onPress={() => {
+              onPress={async () => {
+                await guardarResultadosPartida(racha);
                 reiniciarJuegoCompleto();
                 router.replace('/home');
               }}
@@ -295,7 +354,8 @@ export default function Juego() {
             <Text style={styles.modalText}>Puntuación final: {racha}</Text>
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: '#478783', marginTop: 10 }]}
-              onPress={() => {
+              onPress={async () => {
+                await guardarResultadosPartida(racha);
                 reiniciarJuegoCompleto();
                 router.replace('/home');
               }}

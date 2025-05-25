@@ -212,6 +212,10 @@ export default function Home() {
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{userData.objectsFound}</Text>
+              <Text style={styles.statLabel}>Partidas totales</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{userData.objectsFound}</Text>
               <Text style={styles.statLabel}>Objetos</Text>
             </View>
             <View style={styles.statCard}>

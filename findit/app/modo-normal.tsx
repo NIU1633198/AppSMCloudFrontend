@@ -20,7 +20,7 @@ export default function ModoNormal() {
         </Text>
 
         <Text style={styles.listItem}>
-            • <Text style={styles.bold}>Si aciertas:</Text> ganarás <Text style={styles.highlight}>1 punto</Text> y la <Text style={styles.bold}>racha</Text> se mantendrá. Se te propondrá un nuevo objeto automáticamente.
+            • <Text style={styles.bold}>Si aciertas:</Text> ganarás <Text style={styles.highlight}>10 puntos</Text> y la <Text style={styles.bold}>racha</Text> se mantendrá. Se te propondrá un nuevo objeto automáticamente.
         </Text>
 
         <Text style={styles.listItem}>
