@@ -120,11 +120,6 @@ export default function Juego() {
       setModalCorrecto(true);
     } else {
       setModalIncorrecto(true);
-
-      setTimeout(() => {
-        setModalIncorrecto(false);
-        setModalTiempoAgotado(true);
-      }, 2000);
     }
   };
 
@@ -269,7 +264,7 @@ export default function Juego() {
               style={[styles.modalButton, { backgroundColor: '#478783', marginTop: 10 }]}
               onPress={iniciarNuevoReto}
             >
-              <Text style={{ color: 'white' }}>Aceptar</Text>
+              <Text style={{ color: 'white' }}>Siguiente reto</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -279,6 +274,17 @@ export default function Juego() {
           <View style={styles.modalContainer}>
             <Text style={styles.modalText}>❌ Objeto incorrecto</Text>
             <Text style={styles.modalText}>¡Fin de la partida!</Text>
+            <Text style={styles.modalText}>Puntuación final: {racha}</Text>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#478783', marginTop: 10 }]}
+              onPress={() => {
+                reiniciarJuegoCompleto();
+                router.replace('/home');
+              }}
+            >
+              <Text style={{ color: 'white' }}>Volver al inicio</Text>
+            </TouchableOpacity>
+            
           </View>
         </View>
       )}

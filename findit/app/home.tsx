@@ -211,10 +211,6 @@ export default function Home() {
           <Text style={styles.sectionTitle}>Tus estadísticas</Text>
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{userData.level}</Text>
-              <Text style={styles.statLabel}>Nivel</Text>
-            </View>
-            <View style={styles.statCard}>
               <Text style={styles.statValue}>{userData.objectsFound}</Text>
               <Text style={styles.statLabel}>Objetos</Text>
             </View>
