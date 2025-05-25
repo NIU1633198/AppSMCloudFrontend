@@ -216,7 +216,7 @@ export default function Home() {
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{userData.objectsFound}</Text>
-              <Text style={styles.statLabel}>Objetos</Text>
+              <Text style={styles.statLabel}>Objetos correctos</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{userData.accuracy}%</Text>
