@@ -27,6 +27,7 @@ interface UserData {
   streak: number;
   objectsFound: number;
   accuracy: number;
+  partidasTotales: number;
 }
 
 interface GameMatch {
@@ -54,7 +55,8 @@ export default function Home() {
     level: 1,
     streak: 0,
     objectsFound: 0,
-    accuracy: 0
+    accuracy: 0,
+    partidasTotales: 0,
   });
   const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,6 +115,7 @@ export default function Home() {
             streak: 0, // Se calculará desde las partidas más recientes
             objectsFound: userDataFromFirestore.objetosEncontrados || 0,
             accuracy: Math.round(userDataFromFirestore.precision || 0),
+            partidasTotales: userDataFromFirestore.partidasTotales || 0, // Añadir aquí
           });
 
           // Cargar las mejores partidas para el ranking
@@ -211,7 +214,7 @@ export default function Home() {
           <Text style={styles.sectionTitle}>Tus estadísticas</Text>
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{userData.objectsFound}</Text>
+              <Text style={styles.statValue}>{userData.partidasTotales}</Text>
               <Text style={styles.statLabel}>Partidas totales</Text>
             </View>
             <View style={styles.statCard}>
