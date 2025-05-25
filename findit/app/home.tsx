@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import Icon from 'react-native-vector-icons/Ionicons';
-
 import {
   Text,
   StyleSheet,
@@ -15,10 +14,10 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
-import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, limit,Timestamp } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, limit, Timestamp } from "firebase/firestore";
 import { app } from '../firebase';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface UserData {
   name: string;
@@ -40,15 +39,14 @@ interface GameMatch {
 interface RankingItem {
   id: string;
   name: string;
-  points: number;
-  isCurrentUser?: boolean;
+  points: string; // Cambiado a string para poder mostrar ----
 }
 
 export default function Home() {
   const router = useRouter();
   const auth = getAuth();
   const db = getFirestore(app);
-  
+
   const [userData, setUserData] = useState<UserData>({
     name: "",
     points: 0,
@@ -60,8 +58,8 @@ export default function Home() {
   });
   const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modoClasificacion, setModoClasificacion] = useState<'normal' | 'contrarreloj'>('normal');
 
-  // Función para calcular el nivel basado en los puntos
   const calculateLevel = (points: number): number => {
     if (points < 500) return 1;
     if (points < 1000) return 2;
@@ -75,7 +73,6 @@ export default function Home() {
     return 10;
   };
 
-  // Función para formatear la fecha
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('es-ES', {
       day: '2-digit',
@@ -83,7 +80,6 @@ export default function Home() {
       year: 'numeric'
     });
   };
-
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -95,16 +91,11 @@ export default function Home() {
           return;
         }
 
-        console.log("Cargando datos del usuario:", currentUser.uid);
-
-        // Cargar datos principales del usuario
         const userDocRef = doc(db, "users", currentUser.uid);
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
           const userDataFromFirestore = userDoc.data();
-          console.log("Datos del usuario:", userDataFromFirestore);
-
           const points = userDataFromFirestore.puntos || 0;
           const level = calculateLevel(points);
 
@@ -112,16 +103,13 @@ export default function Home() {
             name: userDataFromFirestore.nombre || "Usuario",
             points: points,
             level: level,
-            streak: 0, // Se calculará desde las partidas más recientes
+            streak: 0,
             objectsFound: userDataFromFirestore.objetosEncontrados || 0,
             accuracy: Math.round(userDataFromFirestore.precision || 0),
-            partidasTotales: userDataFromFirestore.partidasTotales || 0, // Añadir aquí
+            partidasTotales: userDataFromFirestore.partidasTotales || 0,
           });
 
-          // Cargar las mejores partidas para el ranking
-          await loadBestMatches(currentUser.uid);
-        } else {
-          console.log("No se encontró documento del usuario");
+          await loadBestMatches(currentUser.uid, modoClasificacion);
         }
       } catch (error) {
         console.error("Error loading user data:", error);
@@ -131,11 +119,11 @@ export default function Home() {
     };
 
     loadUserData();
-  }, []);
+  }, [modoClasificacion]);
 
-    const loadBestMatches = async (userId: string) => {
+  const loadBestMatches = async (userId: string, modo: 'normal' | 'contrarreloj') => {
     try {
-      const partidasRef = collection(db, "users", userId, "partidas");
+      const partidasRef = collection(db, "users", userId, modo === 'normal' ? "partidas" : "partidasContrarreloj");
       const q = query(partidasRef, orderBy("puntos", "desc"), limit(5));
       const partidasSnapshot = await getDocs(q);
 
@@ -144,23 +132,28 @@ export default function Home() {
 
       partidasSnapshot.forEach((doc) => {
         const matchData = doc.data() as GameMatch;
-
         bestMatches.push({
           id: (index + 1).toString(),
-          name: formatDate(matchData.fecha.toDate()), // ✅ OK
-          points: matchData.puntos,
-          isCurrentUser: index === 0
+          name: formatDate(matchData.fecha.toDate()),
+          points: `${matchData.puntos} pts`,
         });
-
         index++;
       });
+
+      // Completar con guiones si faltan partidas
+      for (let i = bestMatches.length + 1; i <= 5; i++) {
+        bestMatches.push({
+          id: i.toString(),
+          name: '----',
+          points: '----',
+        });
+      }
 
       setRanking(bestMatches);
     } catch (error) {
       console.error("Error loading best matches:", error);
     }
   };
-
 
   const handleLogout = () => {
     auth.signOut().then(() => {
@@ -190,13 +183,8 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
-      {/* Header */}
       <View style={styles.header}>
-        <Image 
-          source={require('../assets/images/Logo_NF_Blanco.png')} 
-          style={styles.headerLogo} 
-        />
+        <Image source={require('../assets/images/Logo_NF_Blanco.png')} style={styles.headerLogo} />
         <View style={styles.userInfo}>
           <Text style={styles.userName}>Hola, {userData.name}</Text>
           <View style={styles.pointsContainer}>
@@ -209,7 +197,6 @@ export default function Home() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Stats Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Tus estadísticas</Text>
           <View style={styles.statsContainer}>
@@ -228,50 +215,42 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Ranking Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Mis mejores partidas</Text>
+          <View style={styles.modeToggleContainer}>
+            <TouchableOpacity
+              style={[styles.modeButton, modoClasificacion === 'normal' && styles.modeButtonActive]}
+              onPress={() => setModoClasificacion('normal')}
+            >
+              <Text style={[styles.modeButtonText, modoClasificacion === 'normal' && styles.modeButtonTextActive]}>Modo Normal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modeButton, modoClasificacion === 'contrarreloj' && styles.modeButtonActive]}
+              onPress={() => setModoClasificacion('contrarreloj')}
+            >
+              <Text style={[styles.modeButtonText, modoClasificacion === 'contrarreloj' && styles.modeButtonTextActive]}>Contrarreloj</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.rankingContainer}>
-            {ranking.length > 0 ? (
-              ranking.map(match => (
-                <View 
-                  key={match.id} 
-                  style={[
-                    styles.rankingRow, 
-                    match.isCurrentUser && styles.currentUserRow
-                  ]}
-                >
-                  <Text style={styles.rankingPosition}>{match.id}</Text>
-                  <Text style={styles.rankingName}>{match.name}</Text>
-                  <Text style={styles.rankingPoints}>{match.points} pts</Text>
-                </View>
-              ))
-            ) : (
-              <View style={styles.noDataContainer}>
-                <Text style={styles.noDataText}>
-                  ¡Juega tu primera partida para aparecer en el ranking!
-                </Text>
+            {ranking.map(match => (
+              <View key={match.id} style={styles.rankingRow}>
+                <Text style={styles.rankingPosition}>{match.id}</Text>
+                <Text style={styles.rankingName}>{match.name}</Text>
+                <Text style={styles.rankingPoints}>{match.points}</Text>
               </View>
-            )}
+            ))}
           </View>
         </View>
 
-        {/* Game Modes Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Jugar</Text>
           <View style={styles.gameModes}>
-            <TouchableOpacity 
-              style={styles.gameButton} 
-              onPress={() => startGame('modo-normal')}
-            >
+            <TouchableOpacity style={styles.gameButton} onPress={() => startGame('modo-normal')}>
               <Text style={styles.gameButtonText}>Modo Normal</Text>
               <Text style={styles.gameButtonSubtext}>Haz la racha más larga que puedas</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.gameButton, styles.timeTrialButton]} 
-              onPress={() => startGame('modo-contrarreloj')}
-            >
+            <TouchableOpacity style={[styles.gameButton, styles.timeTrialButton]} onPress={() => startGame('modo-contrarreloj')}>
               <Text style={styles.gameButtonText}>Contrarreloj</Text>
               <Text style={styles.gameButtonSubtext}>Encuentra el máximo de objetos en un tiempo determinado</Text>
             </TouchableOpacity>
@@ -335,11 +314,6 @@ const styles = StyleSheet.create({
   settingsButton: {
     padding: 5,
   },
-  settingsIcon: {
-    width: 24,
-    height: 24,
-    tintColor: '#fff',
-  },
   scrollContent: {
     padding: 16,
   },
@@ -379,40 +353,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  streakContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
+  modeToggleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  streakCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFD700',
-    alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginBottom: 12,
+    borderRadius: 8,
+    backgroundColor: '#e0f0ee',
+    padding: 4,
   },
-  streakNumber: {
-    fontSize: 24,
+  modeButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modeButtonActive: {
+    backgroundColor: '#478783',
+  },
+  modeButtonText: {
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#2f5856',
   },
-  streakText: {
-    fontSize: 12,
-    color: '#2f5856',
-  },
-  streakMessage: {
-    flex: 1,
-    fontSize: 16,
-    color: '#2f5856',
+  modeButtonTextActive: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   rankingContainer: {
     backgroundColor: 'white',

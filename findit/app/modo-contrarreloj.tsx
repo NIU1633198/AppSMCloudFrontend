@@ -11,7 +11,7 @@ export default function ModoContrarreloj() {
         <Text style={styles.title}>Modo Contrarreloj</Text>
 
         <Text style={styles.description}>
-            En este modo tienes <Text style={styles.bold}>10 minutos en total</Text> para completar tantos retos como puedas. 
+            En este modo tienes <Text style={styles.bold}>5 minutos en total</Text> para completar tantos retos como puedas. 
         </Text>
 
         <Text style={styles.description}>
@@ -20,7 +20,7 @@ export default function ModoContrarreloj() {
         </Text>
 
         <Text style={styles.listItem}>
-            • <Text style={styles.bold}>Cada acierto:</Text> suma <Text style={styles.highlight}>1 punto</Text> y se te propondrá un nuevo objeto automáticamente.
+            • <Text style={styles.bold}>Cada acierto:</Text> suma <Text style={styles.highlight}>1 punto</Text> y se te propondrá un nuevo objeto automáticamente. ¡No pasa nada si fallas!
         </Text>
 
         <Text style={styles.listItem}>
